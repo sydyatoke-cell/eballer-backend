@@ -1,53 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-let deposits = [];
-let balances = {};
-
-app.get('/', (req,res)=>{
-  res.send('Eballer Backend LIVE - LOOP 0141939000 - Ready for Player + Admin');
-});
-
-app.post('/api/deposit', (req,res)=>{
-  const {phone, amount, mpesaCode} = req.body;
-  const dep = {
-    id: Date.now().toString(),
-    phone,
-    amount: parseInt(amount)||150,
-    mpesaCode: (mpesaCode||'').toUpperCase(),
-    status: 'PENDING',
-    time: new Date().toLocaleString()
-  };
-  deposits.unshift(dep);
-  res.json({success:true, dep});
-});
-
-app.get('/api/deposits', (req,res)=>{
-  res.json(deposits);
-});
-
-app.post('/api/approve/:id', (req,res)=>{
-  const d = deposits.find(x=>x.id===req.params.id);
-  if(d){
-    d.status='APPROVED';
-    balances[d.phone]=(balances[d.phone]||0)+d.amount;
-  }
-  res.json({success:true});
-});
-
-app.get('/api/check/:phone', (req,res)=>{
-  const phone = req.params.phone;
-  const my = deposits.filter(d=>d.phone===phone);
-  const approved = my.some(d=>d.status==='APPROVED');
-  res.json({
-    approved,
-    balance: balances[phone]||0,
-    deposits: my
-  });
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=>console.log('Backend LIVE on '+PORT));
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eballer Pool</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}body{background:#0f1215;color:#fff}.h{background:#151a1f;padding:15px;display:flex;justify-content:space-between;border-bottom:2px solid #00ff88;position:sticky;top:0}.logo{color:#00ff88;font-weight:900}.bal{background:#00ff88;color:#000;padding:6px 14px;border-radius:20px;font-weight:800}.c{max-width:600px;margin:15px auto;padding:12px}.card{background:#1c232a;border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid #2a3440}.pb{background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;border-radius:12px;padding:14px;font-weight:800}.v{background:#000;color:#00ff88;padding:4px 10px;border-radius:6px;font-family:monospace}input{width:100%;padding:14px;background:#0f1215;border:1px solid #2a3440;border-radius:10px;color:#fff;margin:8px 0}.btn{width:100%;padding:14px;border:none;border-radius:12px;font-weight:900;cursor:pointer}.btn-g{background:#00ff88;color:#000}.locked{position:relative}.lock-overlay{position:absolute;inset:0;background:rgba(15,18,21,.92);backdrop-filter:blur(6px);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:5}.table{width:100%;height:160px;background:radial-gradient(#1a5c2a,#0f3d1a);border:8px solid #5a2d0c;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:10px 0}.fixture{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#151a1f;border-radius:10px;margin:8px 0}</style>
+</head><body>
+<div class="h"><div class="logo">EBALLER POOL</div><div class="bal">KES <span id="bal">0</span></div></div>
+<div class="c">
+<div class="card" id="depositCard"><h3 style="color:#00ff88">💰 Deposit - Lipa na M-Pesa</h3>
+<div class="pb"><div style="display:flex;justify-content:space-between"><span>Paybill</span><span class="v">714777</span></div><div style="display:flex;justify-content:space-between;margin-top:8px"><span>Account</span><span class="v">0141939000</span></div></div>
+<input id="p" placeholder="Phone 07..."><input id="a" type="number" value="150"><input id="c" placeholder="M-PESA CODE TJ..." style="text-transform:uppercase;border:2px solid #00ff88"><button class="btn btn-g" onclick="deposit()">SUBMIT FOR VERIFICATION</button><div id="status" style="margin-top:10px;color:#ffa500;font-size:13px"></div></div>
+<div class="card locked" id="gameCard"><div class="lock-overlay" id="lockOverlay"><div style="font-size:50px">🔒</div><h3>Tables Locked</h3><p style="color:#8a9bb0;font-size:13px">Pay via Paybill 714777 Acc 0141939000<br>Submit code, wait admin approval</p></div>
+<h3 style="color:#00ff88">🎱 Pool Tables</h3><div class="table"><span style="font-weight:900">TABLE 1 - OPEN - JOIN</span></div><div class="table" style="height:100px"><span style="color:#00ff88;font-weight:800">TABLE 2 - TOURNAMENT 8:30PM</span></div>
+<h3 style="color:#00ff88;margin-top:15px">📅 Fixtures Today - Kisumu</h3><div class="fixture"><span>Brian vs Otieno</span><span style="color:#00ff88">7PM</span></div><div class="fixture"><span>Kings vs Lakers - Final 1000</span><button class="btn btn-g" style="width:auto;padding:6px 12px" onclick="joinGame()">JOIN 150</button></div></div>
+</div>
+<script>let myPhone=localStorage.getItem('eb_phone')||'',approved=localStorage.getItem('eb_approved')=='yes',bal=parseInt(localStorage.getItem('eb_b')||0);function updateUI(){document.getElementById('bal').innerText=bal;document.getElementById('lockOverlay').style.display=approved?'none':'flex';document.getElementById('depositCard').style.display=approved?'none':'block';}function deposit(){let ph=document.getElementById('p').value.trim(),am=document.getElementById('a').value,cd=document.getElementById('c').value.trim().toUpperCase();if(!ph||!cd)return alert('Enter phone & code');myPhone=ph;localStorage.setItem('eb_phone',ph);let ds=JSON.parse(localStorage.getItem('eb_d')||'[]');ds.push({id:Date.now().toString(),phone:ph,amount:am,code:cd,status:'PENDING',time:new Date().toLocaleString()});localStorage.setItem('eb_d',JSON.stringify(ds));document.getElementById('status').innerText='Submitted '+cd+' - Wait admin';alert('Submitted! Admin will check Loop 0141939000');}function joinGame(){if(!approved)return alert('Pay first, wait approval');alert('Joined! Be at hall 7PM');}function checkApproval(){let isApproved=localStorage.getItem('eb_approved')=='yes';if(isApproved&&!approved){approved=true;bal=parseInt(localStorage.getItem('eb_b')||0);updateUI();}}setInterval(checkApproval,3000);document.getElementById('p').value=myPhone;updateUI();</script></body></html>
